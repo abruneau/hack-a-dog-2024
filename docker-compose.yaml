@@ -1,0 +1,39 @@
+services:
+  datadog:
+    image: public.ecr.aws/datadog/agent:7
+    container_name: datadog_agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+    environment:
+      DD_ENV: 'hack-a-dog'
+      DD_API_KEY: $DD_API_KEY
+      DD_SITE: $DD_SITE
+      DD_LOGS_ENABLED: 'true'
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: 'true'
+      DD_PROCESS_AGENT_ENABLED: 'true'
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: 'true'
+      DD_APM_ENABLED: 'true'
+      DD_APM_NON_LOCAL_TRAFFIC: 'true'
+    restart: unless-stopped
+    labels:
+      # Datadog
+      com.datadoghq.tags.env: test
+      com.datadoghq.tags.service: agent
+      com.datadoghq.tags.version: 7
+      com.datadoghq.ad.logs: '[{"source": "agent", "service": "datadog"}]'
+
+  qiskit:
+    container_name: qiskit_app
+    build: .
+    environment:
+      DD_SERVICE: "qiskit_app"
+      DD_ENV: "test"
+      DD_AGENT_HOST: "datadog"
+    labels:
+      com.datadoghq.tags.env: test
+      com.datadoghq.tags.service: qiskit_app
+    ports:
+      - 5000:5000
+

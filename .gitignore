@@ -1,2 +1,4 @@
 .env
-app/ibmapi.txt
+ibmapi.txt
+venv
+__pycache__

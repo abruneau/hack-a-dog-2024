@@ -3,6 +3,8 @@ import time
 import logging
 import sys
 import ddtrace
+from ddtrace.constants import ANALYTICS_SAMPLE_RATE_KEY
+from ddtrace.internal.utils import get_argument_value, set_argument_value
 from qiskit_ibm_runtime import RuntimeJob, RuntimeJobV2
 from qiskit.primitives import PrimitiveResult
 from ddtrace.vendor import wrapt
@@ -27,29 +29,57 @@ def traced_run(func, _, args, kwargs):
         span = _start_span_with_tags(job)
         stream_thread = threading.Thread(target=stream_result, args=[job, span])
         stream_thread.start()
-        if isinstance(job, RuntimeJob) or isinstance(job, RuntimeJobV2):
-            job.stream_results = wrapt.FunctionWrapper(
-                job.stream_results, traced_stream_results
-            )
+        # if isinstance(job, RuntimeJob) or isinstance(job, RuntimeJobV2):
+        #     job.stream_results = wrapt.FunctionWrapper(
+        #         job.stream_results, traced_stream_results
+        #     )
 
     except Exception:
         span.set_exc_info(*sys.exc_info())
     return job
 
-def traced_stream_results(func, _, args, kwargs):
-    logging.info("traced_stream_results")
-    callback = args[0]
-    def traced_callback(*args, **kwargs):
-        logging.info("traced_stream_results_callback")
-        return callback(*args, **kwargs)
-    return func(traced_callback, *args[1:], **kwargs)
+# def traced_stream_results(func, _, args, kwargs):
+#     logging.info("traced_stream_results")
+#     for arg in args:
+#         logging.info("other args: %s", arg)
+#     for key, value in kwargs.items():
+#         logging.info(f'key: {key} | value: {value}')
+#     callback = args[0]
+#     def traced_callback(*args, **kwargs):
+#         print ("traced_stream_results_callback")
+#         for arg in args:
+#             logging.info("other args: %s", arg)
+#         for key, value in kwargs.items():
+#             logging.info(f'key: {key} | value: {value}')
+#         return callback(*args, **kwargs)
+#     return func(traced_callback, *args[1:], **kwargs)
 
-# def traced_stream_results_callback(func, _, args, kwargs):
-#     logging.info("traced_stream_results_callback")
+# def traced_base_runtime_job_stream_results(func, _, args, kwargs):
+#     logging.info("traced_base_runtime_job_stream_results")
+#     for arg in args:
+#         logging.info("other args: %s", arg)
+#     user_callback = get_argument_value(args, kwargs, 3, "user_callback")
+#     if user_callback:
+#         logging.info("callback found")
+#         traced_callback = wrapt.FunctionWrapper(
+#                 user_callback, traced_user_callback
+#             )
+#         args, kwargs = set_argument_value(args, kwargs, 3, "user_callback", traced_callback)
+#     for key, value in kwargs.items():
+#         logging.info(f'key: {key} | value: {value}')
+#     return func(*args, **kwargs)
+
+# def traced_user_callback(func, _, args, kwargs):
+#     logging.info("traced_user_callback")
+#     for arg in args:
+#         logging.info("other args: %s", arg)
+#     for key, value in kwargs.items():
+#         logging.info(f'key: {key} | value: {value}')
 #     return func(*args, **kwargs)
 
 def _start_span_with_tags(job):
-    span = tracer.trace("qiskit.job")
+    span = tracer.trace("qiskit.job", resource="qiskit.job", service="qiskit")
+    span.set_tag(ANALYTICS_SAMPLE_RATE_KEY, True)
     start_time = time.time()
     job_id = job.job_id()
     span.set_tag("job.start_time", start_time)

@@ -1,7 +1,8 @@
 import flask
 import logging
 import sys
-from tracing import traced_run, traced_transpile, _start_span_with_tags, _close_span_on_success
+
+from tracing import traced_run, traced_transpile
 
 from qiskit import transpile
 from qiskit.circuit import QuantumCircuit, QuantumRegister, ClassicalRegister
@@ -29,6 +30,7 @@ qiskit_ibm_runtime.IBMBackend.run = wrapt.FunctionWrapper(_run, traced_run)
 qiskit_ibm_runtime.SamplerV2.run = wrapt.FunctionWrapper(_sampler_run, traced_run)
 qiskit_ibm_runtime.QiskitRuntimeService.job = wrapt.FunctionWrapper(_job, traced_run)
 transpile = wrapt.FunctionWrapper(_transpile, traced_transpile)
+# qiskit_ibm_runtime.base_runtime_job.BaseRuntimeJob._stream_results = wrapt.FunctionWrapper(qiskit_ibm_runtime.base_runtime_job.BaseRuntimeJob._stream_results, traced_base_runtime_job_stream_results)
 # qiskit_ibm_runtime.RuntimeJobV2.stream_results = wrapt.FunctionWrapper(_stream_results, traced_stream_results)
 # qiskit_ibm_runtime.RuntimeJob.stream_results = wrapt.FunctionWrapper(qiskit_ibm_runtime.RuntimeJob.stream_results, traced_stream_results)
 
@@ -73,8 +75,6 @@ def run():
     backend = service.least_busy(simulator=False, operational=True, min_num_qubits=5)
     transpiled_circuit = transpile(qc, backend)
     job = backend.run(transpiled_circuit)
-    # result = job.result()
-    # logging.info(result)
     job.stream_results(log_results)
     return "OK"
 
@@ -86,10 +86,11 @@ def session():
     with Session(backend=backend) as session:
         sampler = Sampler(session=session)
         job = sampler.run([isa_circuit])
-        pub_result = job.result()[0]
-        print(f"Sampler job ID: {job.job_id()}")
-        logging.info(pub_result)
-        print(f"Counts: {pub_result.data.cr.get_counts()}")
+        log_results(job.job_id(), job.result())
+        # pub_result = job.result()[0]
+        # print(f"Sampler job ID: {job.job_id()}")
+        # logging.info(pub_result)
+        # print(f"Counts: {pub_result.data.cr.get_counts()}")
     return "OK"
 
 @app.route("/replay/<jobid>", methods=["GET"])
@@ -97,6 +98,7 @@ def replay(jobid):
     job = service.job(jobid)
     # span = _start_span_with_tags(job)
     # _close_span_on_success(job, span)
+    # job.stream_results(log_results)
     log_results(jobid, job.result())
     return "OK"
 

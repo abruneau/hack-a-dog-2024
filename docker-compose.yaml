@@ -20,16 +20,16 @@ services:
     ports:
       - 8126:8126
 
-  # qiskit:
-  #   container_name: qiskit_app
-  #   build: .
-  #   environment:
-  #     DD_SERVICE: "qiskit_app"
-  #     DD_ENV: "test"
-  #     DD_AGENT_HOST: "datadog"
-  #   labels:
-  #     com.datadoghq.tags.env: test
-  #     com.datadoghq.tags.service: qiskit_app
-  #   ports:
-  #     - 5000:5000
+  qiskit:
+    container_name: qiskit_app
+    build: .
+    environment:
+      DD_SERVICE: "qiskit_app"
+      DD_ENV: "test"
+      DD_AGENT_HOST: "datadog"
+    labels:
+      com.datadoghq.tags.env: test
+      com.datadoghq.tags.service: qiskit_app
+    ports:
+      - 5000:5000
 
